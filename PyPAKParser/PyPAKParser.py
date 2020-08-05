@@ -8,11 +8,9 @@ class PakParser():
                          2: "BIAS_MEMORY", 3: "BIAS_SPEED"}
 
     def __init__(self, filepath):
-        self.data = None
         with open(filepath, "rb") as f:
-            self.data = f.read()
-        self.reader = PakParser.PakReader(self.data)
-        self.records = self.reader.Read()
+            self.reader = PakParser.PakReader(f)
+            self.records = self.reader.Read()
 
     class Block():
         def __init__(self, start, size):
@@ -60,15 +58,13 @@ class PakParser():
                 compressionBlockSize = reader.readInt(32, True)
 
     class PakReader():
-        def __init__(self, data):
-            self.fullData = data
-            self.position = 0
+        def __init__(self, fileObj):
+            self.fileObj = fileObj
 
         def Read(self):
             records = []
             # First we head straight to the footer
-            self.position = len(self.fullData)-44
-
+            self.fileObj.seek(-44, 2)
             rtn = self.readInt(32, True)
             assert hex(rtn) == "0x5a6f12e1"
 
@@ -76,7 +72,7 @@ class PakParser():
             indexOffset = self.readInt(64, True)
             indexSize = self.readInt(64, True)
 
-            self.position = indexOffset
+            self.fileObj.seek(indexOffset, 0)
             strLen = self.readInt(32, True)
             mountPoint = self.readLen(strLen, True)
             recordCount = self.readInt(32, True)
@@ -84,8 +80,8 @@ class PakParser():
             for _ in range(recordCount):
                 rec = PakParser.Record()
                 rec.Read(self, fileVersion, True)
-                r1Pos = self.position
-                self.position = rec.offset
+                r1Pos = self.fileObj.tell()
+                self.fileObj.seek(rec.offset, 0)
 
                 # I don't know why there's a second record but there is, so we read it out
                 rec2 = PakParser.Record()
@@ -99,7 +95,7 @@ class PakParser():
                     for block in rec2.compressionBlocks:
                         blockOffset = block.Start
                         blockSize = block.Size
-                        self.position = blockOffset
+                        self.fileObj.seek(blockOffset, 0)
                         memstream = self.readLen(blockSize)
                         data_decompressed.append(
                             zlib.decompress(memstream))
@@ -111,7 +107,7 @@ class PakParser():
                         "Unimplemented compression method " + PakParser.CompressionMethod[rec.compressionMethod])
                 rec2.fileName = rec.fileName
                 records.append(rec2)
-                self.position = r1Pos
+                self.fileObj.seek(r1Pos, 0)
             return records
 
         def readInt(self, size, unsigned=False):
@@ -126,17 +122,16 @@ class PakParser():
             if size == 64:
                 bType = b'<Q' if unsigned else b'<q'
 
-            data = self.fullData[self.position:self.position+int(size/8)]
-            rtnData = int(struct.unpack(bType, bytes(data))[0])
-            self.position += int(size/8)
+            t = self.fileObj.read(int(size / 8))
+            rtnData = int(struct.unpack(
+                bType, t)[0])
             return rtnData
 
         def readLen(self, length, strRtn=False):
             if isinstance(length, bytes):
                 length = int.from_bytes(length, 'little')
 
-            rtnData = self.fullData[self.position:self.position+int(length)]
-            self.position += int(length)
+            rtnData = self.fileObj.read(int(length))
             if strRtn:
                 rtnData = rtnData.strip(b"\x00").decode('iso-8859-1')
             return rtnData
