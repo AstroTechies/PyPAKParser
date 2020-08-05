@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="PyPAKParser",
-    version="1.0.1",
+    version="1.1.0",
     author="Ricky Davis",
     author_email="ricky.c.davis.9@gmail.com",
     description="Unreal Engine PAK Parser written in Python 3 originally for the game Astroneer",
