@@ -1,20 +1,6 @@
 # pylint: disable=unused-variable
 import struct
 import zlib
-'''
-    Parses both compressed and uncompressed PAK files to look for `metadata.json`
-
-    USAGE:
-
-        from PyPAKParser import PakParser
-
-        PP = PakParser("000-GoodSample_P.pak")
-        print(PP.data)
-
-        PP = PakParser("000-CompressedSample_P.pak")
-        print(PP.data)
-
-'''
 
 
 class PakParser():
@@ -96,12 +82,10 @@ class PakParser():
             recordCount = self.readInt(32, True)
 
             for _ in range(recordCount):
-                print('here')
                 rec = PakParser.Record()
                 rec.Read(self, fileVersion, True)
                 r1Pos = self.position
                 self.position = rec.offset
-                print(f"r1 {rec.fileName}")
 
                 # I don't know why there's a second record but there is, so we read it out
                 rec2 = PakParser.Record()
@@ -109,7 +93,6 @@ class PakParser():
 
                 if PakParser.CompressionMethod[rec.compressionMethod] == "NONE":
                     rec2.Data = self.readLen(rec2.fileSize, True)
-                    #print(f"r2 {rec2.Data}")
 
                 elif PakParser.CompressionMethod[rec.compressionMethod] == "ZLIB":
                     data_decompressed = []
