@@ -1,0 +1,8 @@
+__pycache__
+.vscode
+.pylintrc
+
+PAKS/
+
+notes
+test_PAKExtract.py
