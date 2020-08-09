@@ -45,7 +45,7 @@ class PakParser():
 
         return self.headers.keys()
 
-    def Unpack(self, recordName):
+    def Unpack(self, recordName, decode=False):
         if recordName not in self.headers:
             self.List(recordName)
         offset = self.headers[recordName]
@@ -55,7 +55,9 @@ class PakParser():
         rec2 = PakParser.Record()
         rec2.Read(self.reader, self.fileVersion, False)
         if PakParser.CompressionMethod[rec2.compressionMethod] == "NONE":
-            rec2.Data = self.reader.readLen(rec2.fileSize, True)
+            rec2.Data = self.reader.readLen(rec2.fileSize, False)
+            if decode:
+                rec2.Data = rec2.Data.decode('iso-8859-1')
 
         elif PakParser.CompressionMethod[rec2.compressionMethod] == "ZLIB":
             data_decompressed = []
@@ -68,7 +70,9 @@ class PakParser():
                     zlib.decompress(memstream))
 
             rec2.Data = b''.join(
-                data_decompressed).decode('iso-8859-1')
+                data_decompressed)
+            if decode:
+                rec2.Data = rec2.Data.decode('iso-8859-1')
         else:
             raise NotImplementedError(
                 "Unimplemented compression method " + PakParser.CompressionMethod[rec2.compressionMethod])
