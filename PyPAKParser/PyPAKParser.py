@@ -1,6 +1,7 @@
 # pylint: disable=unused-variable
 #import struct
 import zlib
+UE4_PAK_MAGIC = "0x5a6f12e1"
 
 
 class PakParser():
@@ -19,8 +20,11 @@ class PakParser():
         if self.seekStop == 0:
             # First we head straight to the footer
             self.reader.fileObj.seek(-44, 2)
-            rtn = self.reader.readInt(32, True)
-            assert hex(rtn) == "0x5a6f12e1"
+            magic = self.reader.readInt(32, True)
+            if hex(magic) != UE4_PAK_MAGIC:  # Magic number
+                self.reader.fileObj.seek(-204, 2)
+                magic = self.reader.readInt(32, True)
+            assert hex(magic) == UE4_PAK_MAGIC
 
             self.fileVersion = self.reader.readInt(32, True)
             indexOffset = self.reader.readInt(64, True)
@@ -63,6 +67,8 @@ class PakParser():
             data_decompressed = []
             for block in rec2.compressionBlocks:
                 blockOffset = block.Start
+                if self.fileVersion == 8:
+                    blockOffset += offset
                 blockSize = block.Size
                 self.reader.fileObj.seek(blockOffset, 0)
                 memstream = self.reader.readLen(blockSize)
@@ -96,7 +102,6 @@ class PakParser():
             self.Data = None
 
         def Read(self, reader, fileVersion, includesHeader, quickread=False):
-
             if includesHeader:
                 strLen = reader.readInt(32, True)
                 self.fileName = reader.readLen(strLen, True)

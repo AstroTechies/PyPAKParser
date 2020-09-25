@@ -6,3 +6,5 @@ PAKS/
 
 notes
 test_PAKExtract.py
+test_PAKGetFile.py
+test.txt
